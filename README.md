@@ -64,7 +64,7 @@ Step 2. Interact with the API with the following line.
 ```http://localhost:8000/api/films/delete/<film_id>/``` or ```http://127.0.0.1:8000/api/films/delete/<film_id>/```
 
 
-NOTE : Remember to set the appropriate request type (GET, POST, PUT, DELETE) and URL in Postman. 
+**NOTE** : Remember to set the appropriate request type (GET, POST, PUT, DELETE) and URL in Postman. 
 
 For POST and PUT requests, include the required parameters in the request body in the JSON format shown below.
 ```
@@ -75,3 +75,5 @@ For POST and PUT requests, include the required parameters in the request body i
     "note": 3
 }
 ```
+
+For the GET requests, the data can be retrieved in XML format by adding the header 'Accept' with the value 'application/xml' in Postman.

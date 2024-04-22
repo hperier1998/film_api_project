@@ -1,3 +1,4 @@
+from django.core.serializers import serialize
 from django.http import JsonResponse, HttpResponseBadRequest, HttpResponseNotFound, HttpResponse
 from django.views.decorators.csrf import csrf_exempt
 from .models import Film
@@ -10,10 +11,18 @@ def get_films(request):
     Retrieve details of all films.
     """
     films = Film.objects.all()
-    films_data = [{"id": film.id, "name": film.name, "description": film.description,
-                   "publication_date": film.publication_date.strftime("%Y-%m-%d"), "note": film.note} for film in films]
 
-    return JsonResponse(films_data, safe=False, status=200)
+    # Check the Accept header to determine the response format
+    accept_header = request.headers.get('Accept', '')
+    if 'application/xml' in accept_header:
+        # Serialize data to XML (example implementation)
+        films_xml = serialize('xml', films)
+        return HttpResponse(films_xml, content_type='application/xml', status=200)
+    else:
+        # Serialize data to JSON by default
+        films_data = [{"id": film.id, "name": film.name, "description": film.description,
+                       "publication_date": film.publication_date.strftime("%Y-%m-%d"), "note": film.note} for film in films]
+        return JsonResponse(films_data, safe=False, status=200)
 
 
 @csrf_exempt
@@ -23,10 +32,24 @@ def get_film(request, film_id):
     """
     try:
         film = Film.objects.get(id=film_id)
-        film_data = {"id": film.id, "name": film.name, "description": film.description,
-                     "publication_date": film.publication_date.strftime("%Y-%m-%d"), "note": film.note}
 
-        return JsonResponse(film_data, status=200)
+
+        # Check the Accept header to determine the response format
+        accept_header = request.headers.get('Accept', '')
+        if 'application/xml' in accept_header:
+            # Serialize data to XML (example implementation)
+            film_xml = serialize('xml', [film])
+            return HttpResponse(film_xml, content_type='application/xml', status=200)
+        else:
+            # Serialize data to JSON by default
+            film_data = {
+                "id": film.id,
+                "name": film.name,
+                "description": film.description,
+                "publication_date": film.publication_date.strftime("%Y-%m-%d"),
+                "note": film.note
+            }
+            return JsonResponse(film_data, status=200)
 
     except Film.DoesNotExist:
         return HttpResponseNotFound("Film not found", status=404)
