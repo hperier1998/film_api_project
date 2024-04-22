@@ -13,13 +13,7 @@ def get_films(request):
     films_data = [{"id": film.id, "name": film.name, "description": film.description,
                    "publication_date": film.publication_date.strftime("%Y-%m-%d"), "note": film.note} for film in films]
 
-    accept_header = request.headers.get('Accept', '')
-    if 'application/xml' in accept_header:
-        # Serialize data to XML (example implementation)
-        # You need to implement XML serialization based on your requirements
-        pass
-    else:
-        return JsonResponse(films_data, safe=False)  # safe=False to allow serializing lists
+    return JsonResponse(films_data, safe=False, status=200)
 
 
 @csrf_exempt
@@ -32,15 +26,10 @@ def get_film(request, film_id):
         film_data = {"id": film.id, "name": film.name, "description": film.description,
                      "publication_date": film.publication_date.strftime("%Y-%m-%d"), "note": film.note}
 
-        accept_header = request.headers.get('Accept', '')
-        if 'application/xml' in accept_header:
-            # Serialize data to XML (example implementation)
-            # You need to implement XML serialization based on your requirements
-            pass
-        else:
-            return JsonResponse(film_data)
+        return JsonResponse(film_data, status=200)
+
     except Film.DoesNotExist:
-        return HttpResponseNotFound("Film not found")
+        return HttpResponseNotFound("Film not found", status=404)
 
 
 @csrf_exempt
@@ -63,9 +52,9 @@ def create_film(request):
 
             return JsonResponse({"message": "Film created"}, status=201)
         except json.JSONDecodeError:
-            return HttpResponseBadRequest("Invalid JSON data")
+            return HttpResponseBadRequest("Invalid JSON data", status=400)
     else:
-        return HttpResponseBadRequest("Method not allowed")
+        return HttpResponseBadRequest("Method not allowed", status=400)
 
 
 @csrf_exempt
@@ -95,9 +84,9 @@ def update_film(request, film_id):
 
             return JsonResponse({"message": "Film updated"}, status=200)
         except json.JSONDecodeError:
-            return HttpResponseBadRequest("Invalid JSON data")
+            return HttpResponseBadRequest("Invalid JSON data", status=400)
     else:
-        return HttpResponseBadRequest("Method not allowed")
+        return HttpResponseBadRequest("Method not allowed", status=400)
 
 
 
@@ -116,6 +105,6 @@ def delete_film(request, film_id):
 
             return JsonResponse({"message": "Film deleted"}, status=200)
         except Film.DoesNotExist:
-            return HttpResponseNotFound("Film not found")
+            return HttpResponseNotFound("Film not found", status=400)
     else:
-        return HttpResponseBadRequest("Method not allowed")
+        return HttpResponseBadRequest("Method not allowed", status=400)
