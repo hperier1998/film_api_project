@@ -61,7 +61,7 @@ Step 2. Interact with the API with the following line.
 4. DELETE requests.
 * Delete a specific film.
 
-```http://localhost:8000/api/films/delete/<film_id>/``` or ```http://127.0.0.1:8000/api/films/update/<film_id>/```
+```http://localhost:8000/api/films/delete/<film_id>/``` or ```http://127.0.0.1:8000/api/films/delete/<film_id>/```
 
 
 NOTE : Remember to set the appropriate request type (GET, POST, PUT, DELETE) and URL in Postman. 

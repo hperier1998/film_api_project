@@ -83,8 +83,13 @@ def update_film(request, film_id):
             film.save()
 
             return JsonResponse({"message": "Film updated"}, status=200)
+
+        except Film.DoesNotExist:
+            return HttpResponseNotFound("Film not found", status=404)
+
         except json.JSONDecodeError:
             return HttpResponseBadRequest("Invalid JSON data", status=400)
+
     else:
         return HttpResponseBadRequest("Method not allowed", status=400)
 
@@ -104,7 +109,12 @@ def delete_film(request, film_id):
             film.delete()
 
             return JsonResponse({"message": "Film deleted"}, status=200)
+
+        except Film.DoesNotExist:
+            return HttpResponseNotFound("Film not found", status=404)
+
         except Film.DoesNotExist:
             return HttpResponseNotFound("Film not found", status=400)
+
     else:
         return HttpResponseBadRequest("Method not allowed", status=400)
