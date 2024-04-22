@@ -1,5 +1,3 @@
-# films/views.py
-
 from django.http import JsonResponse, HttpResponseBadRequest, HttpResponseNotFound, HttpResponse
 from django.views.decorators.csrf import csrf_exempt
 from .models import Film
@@ -73,7 +71,7 @@ def create_film(request):
 @csrf_exempt
 def update_film(request, film_id):
     """
-    Update details of a specific film.
+    Update the details of a specific film.
     """
     if request.method == 'PUT':
         try:

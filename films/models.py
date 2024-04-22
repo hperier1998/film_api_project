@@ -1,5 +1,3 @@
-# films/models.py
-
 from django.db import models
 
 
@@ -16,7 +14,4 @@ class Film(models.Model):
     # Additional fields can be added here as needed
 
     def __str__(self):
-        """
-        String for representing the Film object.
-        """
         return self.name
