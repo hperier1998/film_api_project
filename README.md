@@ -38,7 +38,7 @@ You can access the API endpoints using this base URL.
 Step 1. Open Postman on your computer. ([Download Postman here](https://www.postman.com/downloads/)) <br/>
 
 Step 2. Interact with the API with the following line.
-1. GET requests.
+1. **GET** requests.
 * Retrieve all the films.
 
 ```http://localhost:8000/api/films/``` or ```http://127.0.0.1:8000/api/films/```
@@ -47,18 +47,18 @@ Step 2. Interact with the API with the following line.
 
 ```http://localhost:8000/api/films/<film_id>/``` or ```http://127.0.0.1:8000/api/films/<film_id>/```
 
-2. POST requests.
+2. **POST** requests.
 * Create a new film.
 
 ```http://localhost:8000/api/films/create/``` or ```http://127.0.0.1:8000/api/films/create/```
 
-3. PUT requests.
+3. **PUT** requests.
 * Update the details of a specific film based on it's ID.
 
 ```http://localhost:8000/api/films/update/<film_id>/``` or ```http://127.0.0.1:8000/api/films/update/<film_id>/```
 
 
-4. DELETE requests.
+4. **DELETE** requests.
 * Delete a specific film.
 
 ```http://localhost:8000/api/films/delete/<film_id>/``` or ```http://127.0.0.1:8000/api/films/delete/<film_id>/```
