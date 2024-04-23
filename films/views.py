@@ -8,18 +8,29 @@ import json
 @csrf_exempt
 def get_films(request):
     """
-    Retrieve details of all films.
+    Retrieve details of all films, with optional search by title or description.
     """
     films = Film.objects.all()
 
+    # Handle search query parameters
+    title_query = request.GET.get('title')
+    description_query = request.GET.get('description')
+
+    if title_query:
+        films = films.filter(name__icontains=title_query)
+
+    if description_query:
+        films = films.filter(description__icontains=description_query)
+
     # Check the Accept header to determine the response format
     accept_header = request.headers.get('Accept', '')
+
     if 'application/xml' in accept_header:
-        # Serialize data to XML (example implementation)
+        # Serialize data to XML
         films_xml = serialize('xml', films)
         return HttpResponse(films_xml, content_type='application/xml', status=200)
     else:
-        # Serialize data to JSON by default
+        # Serialize data to JSON
         films_data = [{"id": film.id, "name": film.name, "description": film.description,
                        "publication_date": film.publication_date.strftime("%Y-%m-%d"), "note": film.note} for film in films]
         return JsonResponse(films_data, safe=False, status=200)
