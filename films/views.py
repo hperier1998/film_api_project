@@ -1,6 +1,8 @@
 from django.core.serializers import serialize
 from django.http import JsonResponse, HttpResponseBadRequest, HttpResponseNotFound, HttpResponse
 from django.views.decorators.csrf import csrf_exempt
+from django.core.paginator import Paginator
+from django.urls import reverse
 from .models import Film
 import json
 
@@ -8,8 +10,9 @@ import json
 @csrf_exempt
 def get_films(request):
     """
-    Retrieve details of all films, with optional search by title or description.
+    Retrieve paginated details of all films, with optional search by title or description.
     """
+    # Retrieve all films
     films = Film.objects.all()
 
     # Handle search query parameters
@@ -22,18 +25,48 @@ def get_films(request):
     if description_query:
         films = films.filter(description__icontains=description_query)
 
+    # Pagination
+    page_number = request.GET.get('page', 1)
+    page_size = request.GET.get('page_size', 10)
+
+    paginator = Paginator(films, page_size)
+    paginated_films = paginator.get_page(page_number)
+
     # Check the Accept header to determine the response format
     accept_header = request.headers.get('Accept', '')
 
     if 'application/xml' in accept_header:
         # Serialize data to XML
-        films_xml = serialize('xml', films)
+        films_xml = serialize('xml', paginated_films)
         return HttpResponse(films_xml, content_type='application/xml', status=200)
     else:
         # Serialize data to JSON
-        films_data = [{"id": film.id, "name": film.name, "description": film.description,
-                       "publication_date": film.publication_date.strftime("%Y-%m-%d"), "note": film.note} for film in films]
-        return JsonResponse(films_data, safe=False, status=200)
+        films_data = []
+        for film in paginated_films:
+            categories = [category.name for category in film.categories.all()]  # Get categories associated with the film
+            films_data.append({
+                "id": film.id,
+                "name": film.name,
+                "description": film.description,
+                "publication_date": film.publication_date.strftime("%Y-%m-%d"),
+                "note": film.note,
+                "categories": categories
+            })
+
+        # Pagination links
+        next_page_url = reverse('film-list') + f"?page={paginated_films.next_page_number()}" if paginated_films.has_next() else None
+        prev_page_url = reverse('film-list') + f"?page={paginated_films.previous_page_number()}" if paginated_films.has_previous() else None
+
+        return JsonResponse({
+            "results": films_data,
+            "pagination": {
+                "page": paginated_films.number,
+                "total_pages": paginator.num_pages,
+                "total_results": paginator.count,
+                "next_page": next_page_url,
+                "prev_page": prev_page_url
+            }
+        }, status=200)
 
 
 @csrf_exempt
@@ -44,15 +77,15 @@ def get_film(request, film_id):
     try:
         film = Film.objects.get(id=film_id)
 
-
         # Check the Accept header to determine the response format
         accept_header = request.headers.get('Accept', '')
+
         if 'application/xml' in accept_header:
-            # Serialize data to XML (example implementation)
+            # Serialize data to XML
             film_xml = serialize('xml', [film])
             return HttpResponse(film_xml, content_type='application/xml', status=200)
         else:
-            # Serialize data to JSON by default
+            # Serialize film data to JSON
             film_data = {
                 "id": film.id,
                 "name": film.name,
@@ -60,10 +93,10 @@ def get_film(request, film_id):
                 "publication_date": film.publication_date.strftime("%Y-%m-%d"),
                 "note": film.note
             }
-            return JsonResponse(film_data, status=200)
 
+            return JsonResponse(film_data, status=200)
     except Film.DoesNotExist:
-        return HttpResponseNotFound("Film not found", status=404)
+        return JsonResponse({"error": "Film not found"}, status=404)
 
 
 @csrf_exempt

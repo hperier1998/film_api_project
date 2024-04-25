@@ -1,12 +1,13 @@
 from django.db import migrations
 from django.utils import timezone
 from faker import Faker
-from films.models import Film
+from films.models import Film, Category
 
 
 def populate_data(apps, schema_editor):
     fake = Faker()
     films_to_create = 100
+    categories = Category.objects.all()
 
     for _ in range(films_to_create):
         name = fake.name()
