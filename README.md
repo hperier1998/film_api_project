@@ -8,8 +8,8 @@ It provides API endpoints for retrieving, creating, updating, and deleting films
 
 ## Table of contents
 - [Installation](#Installation)
-- [Running the API](#Running the API)
-- [Using Postman to interact with the API](#Using Postman to interact with the API)
+- [Running the API](#Running-the-API)
+- [Using Postman to interact with the API](#Using-Postman-to-interact-with-the-API)
 
 ## Installation
 Step 1. Clone the repository.
