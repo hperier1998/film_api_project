@@ -1,13 +1,12 @@
 from django.db import migrations
 from django.utils import timezone
 from faker import Faker
-from films.models import Film, Category
+from films.models import Film
 
 
 def populate_data(apps, schema_editor):
     fake = Faker()
     films_to_create = 100
-    categories = Category.objects.all()
 
     for _ in range(films_to_create):
         name = fake.name()
@@ -24,7 +23,6 @@ def populate_data(apps, schema_editor):
 
 
 def reverse_data_populate(apps, schema_editor):
-    # Optionally define logic to reverse the data population (e.g., delete created objects)
     Film.objects.filter(name='Example Film').delete()
 
 

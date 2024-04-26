@@ -1,4 +1,6 @@
 from django.db import migrations, models
+from films.models import Film, Category
+import random
 
 
 def populate_categories(apps, schema_editor):
@@ -7,8 +9,28 @@ def populate_categories(apps, schema_editor):
         Category(name='Action'),
         Category(name='Comedy'),
         Category(name='Drama'),
-        # Add more categories as needed
+        Category(name='Horror'),
+        Category(name='Romance'),
+        Category(name='Thriller'),
+        Category(name='Fantasy'),
+        Category(name='Documentary'),
+        Category(name='Crime'),
+        Category(name='Science Fiction'),
     ])
+
+
+def assign_categories_to_films(apps, schema_editor):
+    # Retrieve all films
+    films = Film.objects.all()
+
+    # Retrieve a random category
+    categories = Category.objects.all()
+
+    # Assign random categories to each film
+    for film in films:
+        num_categories = random.randint(1, 4)  # Choose a random number of categories between 1 and 3
+        random_categories = random.sample(list(categories), num_categories)  # Select random categories
+        film.categories.add(*random_categories)  # Assign categories to the film
 
 
 class Migration(migrations.Migration):
@@ -32,4 +54,5 @@ class Migration(migrations.Migration):
         ),
 
         migrations.RunPython(populate_categories),
+        migrations.RunPython(assign_categories_to_films),
     ]

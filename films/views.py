@@ -3,7 +3,7 @@ from django.http import JsonResponse, HttpResponseBadRequest, HttpResponseNotFou
 from django.views.decorators.csrf import csrf_exempt
 from django.core.paginator import Paginator
 from django.urls import reverse
-from .models import Film
+from .models import Film, Category
 import json
 
 
@@ -43,19 +43,41 @@ def get_films(request):
         # Serialize data to JSON
         films_data = []
         for film in paginated_films:
-            categories = [category.name for category in film.categories.all()]  # Get categories associated with the film
+            # Construct hypermedia links
+            film_link = reverse('get_film', kwargs={'film_id': film.id})
+            categories_link = reverse('get_categories_of_film', kwargs={'film_id': film.id})
+
             films_data.append({
                 "id": film.id,
                 "name": film.name,
                 "description": film.description,
                 "publication_date": film.publication_date.strftime("%Y-%m-%d"),
                 "note": film.note,
-                "categories": categories
+                "categories":  [{"id": category.id, "name": category.name} for category in film.categories.all()],
+                "links": {
+                    "film_link": {"href": film_link},
+                    "categories_link": {"href": categories_link}
+                }
             })
 
+        # Construct hypermedia links
+        film_list_link = reverse('film-list')
+
+        # Include title filter in self_link if present
+        if title_query:
+            film_list_link += f"?title={title_query}"
+
+        # Include description filter in self_link if present
+        if description_query:
+            # If title_query is present, add '&' else add '?'
+            separator = '&' if title_query else '?'
+            film_list_link += f"{separator}description={description_query}"
+
         # Pagination links
-        next_page_url = reverse('film-list') + f"?page={paginated_films.next_page_number()}" if paginated_films.has_next() else None
-        prev_page_url = reverse('film-list') + f"?page={paginated_films.previous_page_number()}" if paginated_films.has_previous() else None
+        separator = '&' if title_query or description_query else '?'
+        self_link = film_list_link + f"{separator}page={paginated_films.number}"
+        next_page_url = film_list_link + f"{separator}page={paginated_films.next_page_number()}" if paginated_films.has_next() else None
+        prev_page_url = film_list_link + f"{separator}page={paginated_films.previous_page_number()}" if paginated_films.has_previous() else None
 
         return JsonResponse({
             "results": films_data,
@@ -64,9 +86,10 @@ def get_films(request):
                 "total_pages": paginator.num_pages,
                 "total_results": paginator.count,
                 "next_page": next_page_url,
-                "prev_page": prev_page_url
+                "prev_page": prev_page_url,
+                "current_page": self_link
             }
-        }, status=200)
+        }, safe=False, status=200)
 
 
 @csrf_exempt
@@ -76,6 +99,10 @@ def get_film(request, film_id):
     """
     try:
         film = Film.objects.get(id=film_id)
+
+        # Construct hypermedia links
+        self_link = reverse('get_film', kwargs={'film_id': film_id})
+        categories_link = reverse('get_categories_of_film', kwargs={'film_id': film_id})
 
         # Check the Accept header to determine the response format
         accept_header = request.headers.get('Accept', '')
@@ -91,12 +118,156 @@ def get_film(request, film_id):
                 "name": film.name,
                 "description": film.description,
                 "publication_date": film.publication_date.strftime("%Y-%m-%d"),
-                "note": film.note
+                "note": film.note,
+                "categories": [{"id": category.id, "name": category.name} for category in film.categories.all()],
+                "links": {
+                    "categories_link": {"href": categories_link}
+                },
+                "pagination": {
+                    "current_page": self_link,
+                }
             }
 
-            return JsonResponse(film_data, status=200)
+            return JsonResponse(film_data, safe=False, status=200)
     except Film.DoesNotExist:
         return JsonResponse({"error": "Film not found"}, status=404)
+
+
+@csrf_exempt
+def get_categories(request):
+    """
+    Retrieve paginated details of all categories.
+    """
+    categories = Category.objects.all()
+
+    # Check the Accept header to determine the response format
+    accept_header = request.headers.get('Accept', '')
+
+    if 'application/xml' in accept_header:
+        # Serialize data to XML
+        categories_xml = serialize('xml', categories)
+        return HttpResponse(categories_xml, content_type='application/xml', status=200)
+    else:
+        # Serialize data to JSON
+        category_data = [{"id": category.id, "name": category.name} for category in categories]
+
+        # Construct hypermedia links
+        self_link = reverse('category-list')
+
+        return JsonResponse({
+            "results": category_data,
+            "pagination": {
+                "current_page": self_link,
+            }
+        }, safe=False, status=200)
+
+
+@csrf_exempt
+def get_categories_of_film(request, film_id):
+    """
+    Retrieve categories of a specific film.
+    """
+    try:
+        film = Film.objects.get(id=film_id)
+        categories = film.categories.all()
+
+        # Construct hypermedia links
+        self_link = reverse('get_categories_of_film', kwargs={'film_id': film_id})
+
+        # Check the Accept header to determine the response format
+        accept_header = request.headers.get('Accept', '')
+
+        if 'application/xml' in accept_header:
+            # Serialize data to XML
+            categories_xml = serialize('xml', categories)
+            return HttpResponse(categories_xml, content_type='application/xml', status=200)
+        else:
+            categories_data = [{"id": category.id, "name": category.name}
+                               for category in categories]
+
+            # Construct HAL response
+            response_data = {
+                "categories": categories_data,
+                "links": {
+                    "film": {"href": reverse('get_film', kwargs={'film_id': film_id})},
+                },
+                "pagination": {
+                    "current_page": self_link,
+                }
+            }
+
+            return JsonResponse(response_data, safe=False, status=200)
+    except Film.DoesNotExist:
+        return JsonResponse({"error": "Film not found"}, status=404)
+
+
+@csrf_exempt
+def get_films_of_category(request, category_id):
+    """
+    Retrieve films belonging to a specific category.
+    """
+    try:
+        # Retrieve the category object
+        category = Category.objects.get(id=category_id)
+
+        # Get the films associated with the category
+        films = category.film_set.all()
+
+        # Pagination
+        page_number = request.GET.get('page', 1)
+        page_size = request.GET.get('page_size', 10)
+
+        paginator = Paginator(films, page_size)
+        paginated_films = paginator.get_page(page_number)
+
+        # Check the Accept header to determine the response format
+        accept_header = request.headers.get('Accept', '')
+
+        if 'application/xml' in accept_header:
+            # Serialize films data to XML
+            films_xml = serialize('xml', films)
+            return HttpResponse(films_xml, content_type='application/xml', status=200)
+        else:
+            # Serialize data to JSON
+            films_data = []
+            for film in paginated_films:
+                # Construct hypermedia links
+                film_link = reverse('get_film', kwargs={'film_id': film.id})
+                categories_link = reverse('get_categories_of_film', kwargs={'film_id': film.id})
+
+                films_data.append({
+                    "id": film.id,
+                    "name": film.name,
+                    "description": film.description,
+                    "publication_date": film.publication_date.strftime("%Y-%m-%d"),
+                    "note": film.note,
+                    "categories": [{"id": category.id, "name": category.name} for category in film.categories.all()],
+                    "links": {
+                        "film_link": {"href": film_link},
+                        "categories_link": {"href": categories_link}
+                    }
+                })
+
+            # Construct hypermedia links
+            self_link = reverse('category-films', args=[category_id]) + f"?page={paginated_films.number}"
+
+            # Pagination links
+            next_page_url = reverse('category-films', args=[category_id]) + f"?page={paginated_films.next_page_number()}" if paginated_films.has_next() else None
+            prev_page_url = reverse('category-films', args=[category_id]) + f"?page={paginated_films.previous_page_number()}" if paginated_films.has_previous() else None
+
+            return JsonResponse({
+                "results": films_data,
+                "pagination": {
+                    "page": paginated_films.number,
+                    "total_pages": paginator.num_pages,
+                    "total_results": paginator.count,
+                    "next_page": next_page_url,
+                    "prev_page": prev_page_url,
+                    "current_page": self_link,
+                }
+            }, safe=False, status=200)
+    except Category.DoesNotExist:
+        return JsonResponse({"error": "Category not found"}, status=404)
 
 
 @csrf_exempt
@@ -109,6 +280,10 @@ def create_film(request):
             # Extract film data from request
             data = json.loads(request.body)
 
+            # Check if categories are provided
+            if 'categories' not in data or not data['categories']:
+                return JsonResponse({"error": "Categories are required"}, status=400)
+
             # Create a new film instance
             film = Film.objects.create(
                 name=data['name'],
@@ -117,7 +292,21 @@ def create_film(request):
                 note=data.get('note', None)
             )
 
-            return JsonResponse({"message": "Film created"}, status=201)
+            # Add categories to the film
+            categories_ids = data.get('categories', [])
+            for category_id in categories_ids:
+                try:
+                    category = Category.objects.get(id=category_id)
+                    film.categories.add(category)
+                except Category.DoesNotExist:
+                    return JsonResponse({"error": "Category not found"}, status=404)
+
+            return JsonResponse({
+                "message": "Film created",
+                "links": {
+                    "film": {"href": reverse('get_film', kwargs={'film_id': film.id})}
+                }
+            }, status=201)
         except json.JSONDecodeError:
             return HttpResponseBadRequest("Invalid JSON data", status=400)
     else:
@@ -149,7 +338,22 @@ def update_film(request, film_id):
             # Save the updated film
             film.save()
 
-            return JsonResponse({"message": "Film updated"}, status=200)
+            # Update categories
+            categories_ids = data.get('categories', [])
+            film.categories.clear()
+            for category_id in categories_ids:
+                try:
+                    category = Category.objects.get(id=category_id)
+                    film.categories.add(category)
+                except Category.DoesNotExist:
+                    return JsonResponse({"error": "Category not found"}, status=404)
+
+            return JsonResponse({
+                "message": "Film updated",
+                "links": {
+                    "film": {"href": reverse('get_film', kwargs={'film_id': film.id})}
+                }
+            }, status=200)
 
         except Film.DoesNotExist:
             return HttpResponseNotFound("Film not found", status=404)
