@@ -1,7 +1,8 @@
 from django.db import migrations
 from django.utils import timezone
 from faker import Faker
-from films.models import Film
+from films.models.Film import Film
+from films.models.Category import Category
 
 
 def populate_data(apps, schema_editor):

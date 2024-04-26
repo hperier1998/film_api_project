@@ -1,6 +1,7 @@
 from django.db import migrations, models
-from films.models import Film, Category
 import random
+from films.models.Film import Film
+from films.models.Category import Category
 
 
 def populate_categories(apps, schema_editor):
@@ -36,7 +37,7 @@ def assign_categories_to_films(apps, schema_editor):
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('films', '0002_auto_20240423_1336'),
+        ('films', '0002_auto_populate_data'),
     ]
 
     operations = [
